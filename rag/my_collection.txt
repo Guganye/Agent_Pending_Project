@@ -1,0 +1,81 @@
+一、核心基础
+异步编程 (async/await)：RAG 系统中常有多个 I/O 操作（读文件、调用 Embedding API、查询向量数据库、调用 LLM API）。使用 aiohttp、asyncio 可以并发执行这些任务，大幅提升吞吐量。
+
+类型注解 (Type Hints)：RAG 系统代码量通常较大，函数输入输出复杂（例如一个函数接收文档列表，返回向量列表）。良好的类型注解（from typing import List, Dict, Optional）能极大提高代码可维护性，并配合 IDE 做静态检查。
+
+Pydantic：用于数据验证和设置管理。在 RAG 中常用来：
+
+定义文档的结构 (class Document(BaseModel): page_content: str; metadata: dict)。
+
+定义 LLM 的结构化输出（让 LLM 返回 JSON 格式，然后用 Pydantic 模型解析）。
+
+二、文档处理
+RAG 的第一步是加载和切分文档，这是决定检索质量的关键。
+
+文档加载器：
+
+标准库 pathlib：跨平台处理文件路径，遍历目录。
+
+第三方库：pypdf/pdfplumber (读PDF)、python-docx (读Word)、markdown (读Markdown)、beautifulsoup4 (爬取网页)。
+
+文本切分 (Chunking)：
+
+递归字符切分：理解 while 循环和 if 条件判断，根据 separators 列表（["\n\n", "\n", "。", " ", ""]）递归地尝试用不同分隔符切分文本，直到每块长度小于 chunk_size。
+
+NLTK / spaCy 句子切分：使用 nltk.tokenize.sent_tokenize 或 spacy 按句子边界切分，而不是简单按字符数。
+
+重叠切分：理解列表切片（text[i:i+chunk_size]），在相邻块之间保留重叠字符（overlap），避免切断关键上下文。
+
+三、向量化与索引
+Embedding 模型调用：
+
+使用 requests 或 aiohttp 调用 OpenAI、Cohere、智谱等 API。
+
+或使用 sentence-transformers 库加载本地模型（如 BAAI/bge-small-zh）。
+
+向量数据库：
+
+Chroma（轻量级，适合原型）：理解 collection.add(ids, documents, metadatas, embeddings) 和 collection.query(query_embeddings, n_results=10, where={"source": "wiki"})。
+
+FAISS（高性能本地索引）：理解 index.add(embeddings) 和 index.search(query_embedding, k)。需要了解 numpy 数组操作（因为 FAISS 输入输出都是 numpy 数组）。
+
+Milvus / Qdrant（生产级）：理解集合（Collection）、分区（Partition）、索引类型（IVF_FLAT, HNSW）的概念。
+
+四、检索与重排序
+相似度计算：
+
+理解余弦相似度：向量归一化后的点积。了解 numpy 的 dot 和 norm 函数。
+
+使用 sklearn.metrics.pairwise.cosine_similarity 或手动实现。
+
+重排序 (Rerank)：
+
+调用专用 Rerank API（如 Cohere Rerank、BGE-reranker）。
+
+实现交叉编码器：使用 transformers 库加载 cross-encoder 模型，对 (query, passage) 对进行精细打分，重排初检结果。
+
+五、大模型生成
+Prompt 模板：
+
+使用 str.format() 或 string.Template 构造动态 prompt。
+
+推荐使用 langchain 的 PromptTemplate（虽然 langchain 很重，但其模板语法很有用）。
+
+LLM 调用：
+
+OpenAI SDK：from openai import OpenAI; client.chat.completions.create(model="gpt-4", messages=[...])。
+
+本地模型（如 Llama 3、Qwen）：使用 transformers 库的 pipeline("text-generation", model=...)。
+
+流式输出：理解生成器的 yield 关键字。RAG 应用通常需要边生成边显示，提升用户体验。
+
+引用溯源：在生成的回答中，将引用到的源文档块 ID 或内容一并返回。这需要理解数据结构（如何将检索到的文档 ID 与生成 token 对应起来）。
+
+六、评估
+精确率/召回率 (Precision/Recall)：评估检索阶段是否返回了相关文档。
+
+MRR / NDCG：评估排名的质量。
+
+ROUGE / BERTScore：评估生成答案与标准答案的相似度。
+
+实现要点：熟练掌握列表推导式（[doc for doc in retrieved_docs if doc.id in relevant_ids]）和集合运算（precision = len(relevant_retrieved) / len(retrieved_docs)）。
