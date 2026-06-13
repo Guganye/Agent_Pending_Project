@@ -9,6 +9,9 @@ from mcp.client.stdio import stdio_client # 本地
 """
 本地 创建子进程，进程通信
 远程 socket通信
+
+session.list_tools()
+session.call_tools()
 """
 
 from dotenv import load_dotenv

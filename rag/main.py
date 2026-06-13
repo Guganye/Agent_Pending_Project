@@ -18,10 +18,11 @@ collection.add(
     ids = [str(uuid.uuid4()) for _ in range(len(lines))],
     documents=lines,
     metadatas=[{"line": i} for i in range(len(lines))],
-)
+)# 默认embedding model
 
 # print(collection.peek()) # ids, vectors, documents, metadatas
 
+# 语义检索
 results = collection.query(
     query_texts=[
         "什么是python",
@@ -29,8 +30,9 @@ results = collection.query(
     ],
     n_results=5 # TopK
 )
+
 for i, query_results in enumerate(results["documents"]):
     print(f"\nQuery {i}")
     print("\n".join(query_results))
 
-
+# Reranker
