@@ -28,7 +28,7 @@ class Memory:
                 if not line.strip():
                     continue
                 try:
-                    self.messages.append(json.loads(line))
+                    self.messages.append(json.loads(line)) # 恢复对话
                 except json.JSONDecodeError:
                     pass
 
@@ -48,7 +48,7 @@ class Memory:
             need_rewrite = True
             break
 
-        if need_rewrite:
+        if need_rewrite: # 丢掉消息后的重写
             with MEMORY_FILEPATH.open("w", encoding="utf-8") as f:
                 for message in self.messages:
                     f.write(json.dumps(message, ensure_ascii=False) + "\n")
@@ -75,10 +75,10 @@ class Memory:
             long_term_memory = ""
 
         system_message = {"role": "system", "content": system_prompt}
-        if long_term_memory:
+        if long_term_memory: # 长期记忆
             system_message["content"] += f"\n\n长期记忆：\n{long_term_memory}"
 
-        if self.messages and self.messages[0].get("role") == "system":
+        if self.messages and self.messages[0].get("role") == "system": # MEMORY的系统提示词
             system_message["content"] += f"\n\n{self.messages[0]['content']}"
             return [system_message, *self.messages[1:]]
 
@@ -135,10 +135,10 @@ class Memory:
             memory_update = ""
 
         self.messages = [{"role": "system", "content": f"对话历史摘要：\n{summary}"}, *recent_messages]
-        with MEMORY_FILEPATH.open("w", encoding="utf-8") as f:
+        with MEMORY_FILEPATH.open("w", encoding="utf-8") as f: # 重写对话历史摘要版历史
             for message in self.messages:
                 f.write(json.dumps(message, ensure_ascii=False) + "\n")
 
-        if memory_update:
+        if memory_update: # 续写长期记忆
             with LONG_TERM_MEMORY_FILEPATH.open("a", encoding="utf-8") as f:
                 f.write("\n" + memory_update)
